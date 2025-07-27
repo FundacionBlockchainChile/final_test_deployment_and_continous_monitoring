@@ -1,6 +1,6 @@
 graph TD
     subgraph "Desarrollo y Repositorio"
-        Dev["Desarrollador"] -- "git push" --> Repo("💻 GitHub Repo");
+        Dev("Desarrollador") -- "git push" --> Repo("💻 GitHub Repo");
     end
 
     subgraph "Pipeline CI/CD (GitHub Actions)"
@@ -25,25 +25,25 @@ graph TD
     end
 
     subgraph "Usuarios Finales"
-        User["Usuario"] --> ALB;
+        User("Usuario") --> ALB;
     end
 
     subgraph "Monitoreo y Observabilidad (Stack Local de Demostración)"
-        M_ECS["Servicio Node.js"] -- "Genera Métricas" --> Prometheus;
+        M_ECS("Servicio Node.js") -- "Genera Métricas" --> Prometheus;
         M_ECS -- "Genera Logs" --> Filebeat;
         
         Filebeat -- "Envía Logs" --> Logstash;
         Logstash -- "Procesa" --> Elasticsearch;
-        Elasticsearch -- "Almacena" --> Kibana["Kibana<br/>Visualización de Logs"];
+        Elasticsearch -- "Almacena" --> Kibana("Kibana - Visualización de Logs");
         
-        Prometheus["Prometheus<br/>Recolección de Métricas"] -- "Envía Alertas" --> Alertmanager;
-        Prometheus -- "Fuente de Datos" --> Grafana["Grafana<br/>Dashboards de Métricas"];
+        Prometheus("Prometheus - Recolección de Métricas") -- "Envía Alertas" --> Alertmanager;
+        Prometheus -- "Fuente de Datos" --> Grafana("Grafana - Dashboards de Métricas");
     end
 
     subgraph "Automatización y Notificaciones (ChatOps)"
         Alertmanager -- "Notifica Alertas Críticas" --> Slack;
         CI_CD -- "Notifica Estado del Pipeline" --> Slack;
-        DevOps["Equipo DevOps"] -- "Ejecuta comandos" --> Hubot;
+        DevOps("Equipo DevOps") -- "Ejecuta comandos" --> Hubot;
         Hubot -- "Interactúa con" --> Slack("💬 Slack");
         Hubot -- "Dispara Pipeline" --> CI_CD;
     end
