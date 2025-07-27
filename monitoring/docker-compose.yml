@@ -1,0 +1,90 @@
+version: '3.8'
+
+services:
+  # Microservicio de Node.js a monitorear
+  barcos-service:
+    build:
+      context: ../src
+    container_name: barcos-service
+    ports:
+      - "8080:8080"
+    networks:
+      - monitoring-net
+
+  # --- Stack de Métricas ---
+  prometheus:
+    image: prom/prometheus:v2.40.1
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus:/etc/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    networks:
+      - monitoring-net
+
+  grafana:
+    image: grafana/grafana:9.2.0
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    networks:
+      - monitoring-net
+
+  # --- Stack de Logs (ELK) ---
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.4.3
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    networks:
+      - monitoring-net
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.4.3
+    container_name: logstash
+    ports:
+      - "5044:5044"
+    volumes:
+      - ./logstash/pipeline:/usr/share/logstash/pipeline:ro
+    depends_on:
+      - elasticsearch
+    networks:
+      - monitoring-net
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.4.3
+    container_name: kibana
+    ports:
+      - "5601:5601"
+    depends_on:
+      - elasticsearch
+    networks:
+      - monitoring-net
+
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:8.4.3
+    container_name: filebeat
+    user: root
+    volumes:
+      - ./filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      # Montaje teórico de logs si la app escribiera a archivos
+      # - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    depends_on:
+      - logstash
+    networks:
+      - monitoring-net
+
+networks:
+  monitoring-net:
+    driver: bridge 

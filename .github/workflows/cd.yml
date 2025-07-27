@@ -1,0 +1,96 @@
+name: CD - Deploy Infrastructure
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Entorno a desplegar'
+        required: true
+        type: choice
+        options:
+        - staging
+        - production
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    name: Terraform Plan
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+          
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+
+      - name: Terraform Init
+        id: init
+        run: terraform init
+        working-directory: ./terraform
+
+      - name: Terraform Plan
+        id: plan
+        run: terraform plan -var-file="environments/${{ github.event.inputs.environment }}.tfvars" -no-color
+        working-directory: ./terraform
+        continue-on-error: true # Permite que el pipeline continue para publicar el resultado
+
+      - name: Publish Terraform Plan
+        uses: actions/upload-artifact@v3
+        with:
+          name: terraform-plan-${{ github.event.inputs.environment }}
+          path: ./terraform/tfplan.binary
+
+  apply:
+    runs-on: ubuntu-latest
+    name: Terraform Apply
+    needs: plan
+    
+    # Requiere aprobación manual solo para el entorno de producción
+    environment: 
+      name: ${{ github.event.inputs.environment }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        
+      - name: Terraform Init
+        run: terraform init
+        working-directory: ./terraform
+
+      - name: Download Terraform Plan
+        uses: actions/download-artifact@v3
+        with:
+          name: terraform-plan-${{ github.event.inputs.environment }}
+          path: ./terraform
+
+      - name: Display Terraform Apply message (Theoretical Apply)
+        run: |
+          echo "################################################################"
+          echo "#"
+          echo "#  PASO TEÓRICO: Terraform Apply"
+          echo "#"
+          echo "#  En un escenario real, el siguiente comando ejecutaría el plan:"
+          echo "#"
+          echo "#  terraform apply -auto-approve tfplan.binary"
+          echo "#"
+          echo "#  Este paso se omite para cumplir con los requisitos de la evaluación."
+          echo "#"
+          echo "################################################################"
+        working-directory: ./terraform 
