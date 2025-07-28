@@ -1,3 +1,4 @@
+```mermaid
 graph TD
     subgraph "Desarrollo y Repositorio"
         Dev("Desarrollador") -- "git push" --> Repo("💻 GitHub Repo");
